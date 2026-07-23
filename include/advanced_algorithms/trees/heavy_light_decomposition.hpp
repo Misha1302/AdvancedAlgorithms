@@ -1,7 +1,6 @@
 #pragma once
 
 #include <cstddef>
-#include <functional>
 #include <stdexcept>
 #include <utility>
 #include <vector>
@@ -13,22 +12,21 @@ namespace advanced_algorithms {
 class HeavyLightDecomposition {
   public:
     explicit HeavyLightDecomposition(const std::vector<std::vector<std::size_t>>& tree,
-                                     std::size_t root = 0)
-        : tree_(tree) {
-        const auto traversal = detail::root_tree(tree_, root);
+                                     std::size_t root = 0) {
+        const auto traversal = detail::root_tree(tree, root);
         parent_ = traversal.parent;
         depth_ = traversal.depth;
-        if (tree_.empty()) {
+        if (tree.empty()) {
             return;
         }
 
-        const std::size_t n = tree_.size();
+        const std::size_t n = tree.size();
         subtree_size_.assign(n, 1);
         heavy_child_.assign(n, no_vertex());
         for (auto iterator = traversal.order.rbegin(); iterator != traversal.order.rend(); ++iterator) {
             const std::size_t vertex = *iterator;
             std::size_t largest_child_size = 0;
-            for (const std::size_t to : tree_[vertex]) {
+            for (const std::size_t to : tree[vertex]) {
                 if (parent_[to] != vertex) {
                     continue;
                 }
@@ -55,7 +53,7 @@ class HeavyLightDecomposition {
                 vertex_at_position_[timer] = vertex;
                 ++timer;
 
-                for (const std::size_t to : tree_[vertex]) {
+                for (const std::size_t to : tree[vertex]) {
                     if (parent_[to] == vertex && to != heavy_child_[vertex]) {
                         chains.emplace_back(to, to);
                     }
@@ -70,7 +68,7 @@ class HeavyLightDecomposition {
     }
 
     [[nodiscard]] std::size_t size() const noexcept {
-        return tree_.size();
+        return parent_.size();
     }
 
     [[nodiscard]] std::size_t position(std::size_t vertex) const {
@@ -124,12 +122,11 @@ class HeavyLightDecomposition {
 
   private:
     void check_vertex(std::size_t vertex) const {
-        if (vertex >= tree_.size()) {
+        if (vertex >= parent_.size()) {
             throw std::out_of_range("HeavyLightDecomposition vertex is out of range");
         }
     }
 
-    const std::vector<std::vector<std::size_t>>& tree_;
     std::vector<std::size_t> parent_;
     std::vector<std::size_t> depth_;
     std::vector<std::size_t> subtree_size_;

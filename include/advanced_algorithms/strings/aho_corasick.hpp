@@ -3,7 +3,6 @@
 #include <cstddef>
 #include <queue>
 #include <stdexcept>
-#include <string>
 #include <string_view>
 #include <unordered_map>
 #include <utility>
@@ -13,7 +12,7 @@ namespace advanced_algorithms {
 
 class AhoCorasick {
   public:
-    std::size_t add_pattern(std::string pattern) {
+    std::size_t add_pattern(std::string_view pattern) {
         if (built_) {
             throw std::logic_error("Cannot add patterns after AhoCorasick::build");
         }
@@ -29,8 +28,8 @@ class AhoCorasick {
             }
             node = iterator->second;
         }
-        const std::size_t id = patterns_.size();
-        patterns_.push_back(std::move(pattern));
+        const std::size_t id = pattern_lengths_.size();
+        pattern_lengths_.push_back(pattern.size());
         nodes_[node].terminal_pattern_ids.push_back(id);
         return id;
     }
@@ -51,10 +50,6 @@ class AhoCorasick {
             queue.pop();
 
             const std::size_t failure = nodes_[node].failure;
-            nodes_[node].output_pattern_ids = nodes_[node].terminal_pattern_ids;
-            nodes_[node].output_pattern_ids.insert(nodes_[node].output_pattern_ids.end(),
-                                                   nodes_[failure].output_pattern_ids.begin(),
-                                                   nodes_[failure].output_pattern_ids.end());
 
             for (const auto& [character, child] : nodes_[node].next) {
                 std::size_t candidate = failure;
@@ -66,21 +61,23 @@ class AhoCorasick {
                     candidate = iterator->second;
                 }
                 nodes_[child].failure = candidate;
+                nodes_[child].output_link = !nodes_[candidate].terminal_pattern_ids.empty()
+                                                ? candidate
+                                                : nodes_[candidate].output_link;
                 queue.push(child);
             }
         }
 
-        nodes_[0].output_pattern_ids = nodes_[0].terminal_pattern_ids;
         built_ = true;
     }
 
     [[nodiscard]] std::size_t pattern_count() const noexcept {
-        return patterns_.size();
+        return pattern_lengths_.size();
     }
 
     [[nodiscard]] std::vector<std::size_t> match_counts(std::string_view text) const {
         ensure_built();
-        std::vector<std::size_t> counts(patterns_.size(), 0);
+        std::vector<std::size_t> counts(pattern_lengths_.size(), 0);
         std::size_t node = 0;
         for (const char character : text) {
             while (node != 0 && !nodes_[node].next.contains(character)) {
@@ -90,9 +87,7 @@ class AhoCorasick {
             if (iterator != nodes_[node].next.end()) {
                 node = iterator->second;
             }
-            for (const std::size_t pattern_id : nodes_[node].output_pattern_ids) {
-                ++counts[pattern_id];
-            }
+            emit_pattern_ids(node, [&](std::size_t pattern_id) { ++counts[pattern_id]; });
         }
         return counts;
     }
@@ -111,10 +106,10 @@ class AhoCorasick {
             if (iterator != nodes_[node].next.end()) {
                 node = iterator->second;
             }
-            for (const std::size_t pattern_id : nodes_[node].output_pattern_ids) {
-                const std::size_t start = index + 1U - patterns_[pattern_id].size();
+            emit_pattern_ids(node, [&](std::size_t pattern_id) {
+                const std::size_t start = index + 1U - pattern_lengths_[pattern_id];
                 result.emplace_back(pattern_id, start);
-            }
+            });
         }
         return result;
     }
@@ -123,9 +118,26 @@ class AhoCorasick {
     struct Node {
         std::unordered_map<char, std::size_t> next;
         std::size_t failure{};
+        std::size_t output_link{no_node()};
         std::vector<std::size_t> terminal_pattern_ids;
-        std::vector<std::size_t> output_pattern_ids;
     };
+
+    [[nodiscard]] static constexpr std::size_t no_node() noexcept {
+        return static_cast<std::size_t>(-1);
+    }
+
+    template <class Callback>
+    void emit_pattern_ids(std::size_t node, Callback&& callback) const {
+        for (const std::size_t pattern_id : nodes_[node].terminal_pattern_ids) {
+            callback(pattern_id);
+        }
+        for (std::size_t output = nodes_[node].output_link; output != no_node();
+             output = nodes_[output].output_link) {
+            for (const std::size_t pattern_id : nodes_[output].terminal_pattern_ids) {
+                callback(pattern_id);
+            }
+        }
+    }
 
     void ensure_built() const {
         if (!built_) {
@@ -134,7 +146,7 @@ class AhoCorasick {
     }
 
     std::vector<Node> nodes_{1};
-    std::vector<std::string> patterns_;
+    std::vector<std::size_t> pattern_lengths_;
     bool built_{};
 };
 

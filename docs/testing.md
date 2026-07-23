@@ -35,12 +35,12 @@ The fixed suites include:
 
 ## Large-input and TL checks
 
-`advanced_algorithms_performance_tests` currently exercises:
+`advanced_algorithms_performance_tests` and the dedicated regression executable currently exercise:
 
 - centroid decomposition on a chain of 200,000 vertices;
 - LCA and HLD on the same chain;
 - iterative Tarjan SCC on a directed path of 500,000 vertices;
-- Dinic on 100,000 parallel unit-capacity paths;
+- iterative Dinic on a 200,000-vertex path and on 100,000 parallel unit-capacity paths;
 - 300,000 mixed lazy-segment-tree operations;
 - Dijkstra on a 200,000-vertex sparse graph;
 - Aho–Corasick with 20,000 patterns over one million characters;

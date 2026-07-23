@@ -37,9 +37,9 @@ class Dinic {
         }
         const std::size_t id = original_edges_.size();
         const std::size_t forward_index = graph_[from].size();
-        const std::size_t reverse_index = graph_[to].size();
-        graph_[from].push_back(ResidualEdge{to, reverse_index, capacity, id, true});
-        graph_[to].push_back(ResidualEdge{from, forward_index, 0, id, false});
+        const std::size_t reverse_index = graph_[to].size() + (from == to ? 1U : 0U);
+        graph_[from].push_back(ResidualEdge{to, reverse_index, capacity});
+        graph_[to].push_back(ResidualEdge{from, forward_index, 0});
         original_edges_.push_back(OriginalEdge{from, forward_index, capacity});
         return id;
     }
@@ -93,8 +93,6 @@ class Dinic {
         std::size_t to{};
         std::size_t reverse_index{};
         Capacity capacity{};
-        std::size_t original_id{};
-        bool forward{};
     };
 
     struct OriginalEdge {
@@ -127,23 +125,55 @@ class Dinic {
         return level_[sink] != -1;
     }
 
-    Capacity send_flow(std::size_t vertex, std::size_t sink, Capacity pushed) {
-        if (vertex == sink) {
-            return pushed;
-        }
-        for (std::size_t& index = next_edge_[vertex]; index < graph_[vertex].size(); ++index) {
-            ResidualEdge& edge = graph_[vertex][index];
-            if (edge.capacity <= 0 || level_[edge.to] != level_[vertex] + 1) {
+    Capacity send_flow(std::size_t source, std::size_t sink, Capacity pushed) {
+        path_vertices_.clear();
+        path_edges_.clear();
+        path_capacities_.clear();
+
+        path_vertices_.push_back(source);
+        path_capacities_.push_back(pushed);
+
+        while (!path_vertices_.empty()) {
+            const std::size_t vertex = path_vertices_.back();
+            if (vertex == sink) {
+                const Capacity sent = path_capacities_.back();
+                for (std::size_t depth = 0; depth < path_edges_.size(); ++depth) {
+                    const std::size_t from = path_vertices_[depth];
+                    ResidualEdge& edge = graph_[from][path_edges_[depth]];
+                    edge.capacity -= sent;
+                    graph_[edge.to][edge.reverse_index].capacity += sent;
+                }
+                return sent;
+            }
+
+            std::size_t& edge_index = next_edge_[vertex];
+            while (edge_index < graph_[vertex].size()) {
+                const ResidualEdge& edge = graph_[vertex][edge_index];
+                if (edge.capacity > 0 && level_[edge.to] == level_[vertex] + 1) {
+                    break;
+                }
+                ++edge_index;
+            }
+
+            if (edge_index == graph_[vertex].size()) {
+                level_[vertex] = -1;
+                path_vertices_.pop_back();
+                path_capacities_.pop_back();
+                if (!path_edges_.empty()) {
+                    path_edges_.pop_back();
+                    if (!path_vertices_.empty()) {
+                        ++next_edge_[path_vertices_.back()];
+                    }
+                }
                 continue;
             }
-            const Capacity sent = send_flow(edge.to, sink, std::min(pushed, edge.capacity));
-            if (sent == 0) {
-                continue;
-            }
-            edge.capacity -= sent;
-            graph_[edge.to][edge.reverse_index].capacity += sent;
-            return sent;
+
+            const ResidualEdge& edge = graph_[vertex][edge_index];
+            path_edges_.push_back(edge_index);
+            path_vertices_.push_back(edge.to);
+            path_capacities_.push_back(std::min(path_capacities_.back(), edge.capacity));
         }
+
         return 0;
     }
 
@@ -151,6 +181,9 @@ class Dinic {
     std::vector<int> level_;
     std::vector<std::size_t> next_edge_;
     std::vector<OriginalEdge> original_edges_;
+    std::vector<std::size_t> path_vertices_;
+    std::vector<std::size_t> path_edges_;
+    std::vector<Capacity> path_capacities_;
 };
 
 } // namespace advanced_algorithms

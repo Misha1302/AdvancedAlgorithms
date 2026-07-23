@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <cstddef>
 #include <stdexcept>
-#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -14,12 +13,15 @@ namespace advanced_algorithms {
 class CentroidDecomposition {
   public:
     explicit CentroidDecomposition(const std::vector<std::vector<std::size_t>>& tree)
-        : tree_(tree), parent_(tree.size(), no_vertex()), level_(tree.size(), 0),
+        : size_(tree.size()), parent_(tree.size(), no_vertex()), level_(tree.size(), 0),
           component_size_at_selection_(tree.size(), 0), largest_part_at_selection_(tree.size(), 0),
           removed_(tree.size(), false), traversal_parent_(tree.size(), no_vertex()),
           subtree_size_(tree.size(), 0) {
-        detail::validate_tree(tree_);
-        build();
+        detail::validate_tree(tree);
+        build(tree);
+        removed_.clear();
+        traversal_parent_.clear();
+        subtree_size_.clear();
     }
 
     [[nodiscard]] static constexpr std::size_t no_vertex() noexcept {
@@ -27,7 +29,7 @@ class CentroidDecomposition {
     }
 
     [[nodiscard]] std::size_t size() const noexcept {
-        return tree_.size();
+        return size_;
     }
 
     [[nodiscard]] std::size_t parent(std::size_t vertex) const {
@@ -70,12 +72,14 @@ class CentroidDecomposition {
     };
 
     void check_vertex(std::size_t vertex) const {
-        if (vertex >= tree_.size()) {
+        if (vertex >= size_) {
             throw std::out_of_range("CentroidDecomposition vertex is out of range");
         }
     }
 
-    std::size_t find_centroid(std::size_t start, std::vector<std::size_t>& component) {
+    std::size_t find_centroid(const std::vector<std::vector<std::size_t>>& tree,
+                              std::size_t start,
+                              std::vector<std::size_t>& component) {
         component.clear();
         std::vector<std::size_t> stack{start};
         traversal_parent_[start] = start;
@@ -84,7 +88,7 @@ class CentroidDecomposition {
             const std::size_t vertex = stack.back();
             stack.pop_back();
             component.push_back(vertex);
-            for (const std::size_t to : tree_[vertex]) {
+            for (const std::size_t to : tree[vertex]) {
                 if (removed_[to] || to == traversal_parent_[vertex]) {
                     continue;
                 }
@@ -96,7 +100,7 @@ class CentroidDecomposition {
         for (auto iterator = component.rbegin(); iterator != component.rend(); ++iterator) {
             const std::size_t vertex = *iterator;
             subtree_size_[vertex] = 1;
-            for (const std::size_t to : tree_[vertex]) {
+            for (const std::size_t to : tree[vertex]) {
                 if (!removed_[to] && traversal_parent_[to] == vertex) {
                     subtree_size_[vertex] += subtree_size_[to];
                 }
@@ -108,7 +112,7 @@ class CentroidDecomposition {
         std::size_t best_largest_part = component_size;
         for (const std::size_t vertex : component) {
             std::size_t largest_part = component_size - subtree_size_[vertex];
-            for (const std::size_t to : tree_[vertex]) {
+            for (const std::size_t to : tree[vertex]) {
                 if (!removed_[to] && traversal_parent_[to] == vertex) {
                     largest_part = std::max(largest_part, subtree_size_[to]);
                 }
@@ -124,15 +128,15 @@ class CentroidDecomposition {
         return best;
     }
 
-    void build() {
-        if (tree_.empty()) {
+    void build(const std::vector<std::vector<std::size_t>>& tree) {
+        if (tree.empty()) {
             root_ = no_vertex();
             return;
         }
 
         std::vector<Task> tasks{Task{0, no_vertex(), 0}};
         std::vector<std::size_t> component;
-        component.reserve(tree_.size());
+        component.reserve(tree.size());
 
         while (!tasks.empty()) {
             const Task task = tasks.back();
@@ -141,7 +145,7 @@ class CentroidDecomposition {
                 continue;
             }
 
-            const std::size_t centroid = find_centroid(task.start, component);
+            const std::size_t centroid = find_centroid(tree, task.start, component);
             removed_[centroid] = true;
             parent_[centroid] = task.centroid_parent;
             level_[centroid] = task.level;
@@ -149,7 +153,7 @@ class CentroidDecomposition {
                 root_ = centroid;
             }
 
-            for (const std::size_t to : tree_[centroid]) {
+            for (const std::size_t to : tree[centroid]) {
                 if (!removed_[to]) {
                     tasks.push_back(Task{to, centroid, task.level + 1U});
                 }
@@ -157,7 +161,7 @@ class CentroidDecomposition {
         }
     }
 
-    const std::vector<std::vector<std::size_t>>& tree_;
+    std::size_t size_{};
     std::vector<std::size_t> parent_;
     std::vector<std::size_t> level_;
     std::vector<std::size_t> component_size_at_selection_;

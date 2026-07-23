@@ -13,27 +13,26 @@ namespace advanced_algorithms {
 class LcaBinaryLifting {
   public:
     explicit LcaBinaryLifting(const std::vector<std::vector<std::size_t>>& tree,
-                              std::size_t root = 0)
-        : tree_(tree) {
-        const auto traversal = detail::root_tree(tree_, root);
+                              std::size_t root = 0) {
+        const auto traversal = detail::root_tree(tree, root);
         parent_ = traversal.parent;
         depth_ = traversal.depth;
-        if (tree_.empty()) {
+        if (tree.empty()) {
             return;
         }
 
-        const std::size_t levels = static_cast<std::size_t>(std::bit_width(tree_.size()));
-        up_.assign(levels, std::vector<std::size_t>(tree_.size(), root));
+        const std::size_t levels = static_cast<std::size_t>(std::bit_width(tree.size()));
+        up_.assign(levels, std::vector<std::size_t>(tree.size(), root));
         up_[0] = parent_;
         for (std::size_t level = 1; level < levels; ++level) {
-            for (std::size_t vertex = 0; vertex < tree_.size(); ++vertex) {
+            for (std::size_t vertex = 0; vertex < tree.size(); ++vertex) {
                 up_[level][vertex] = up_[level - 1][up_[level - 1][vertex]];
             }
         }
     }
 
     [[nodiscard]] std::size_t size() const noexcept {
-        return tree_.size();
+        return parent_.size();
     }
 
     [[nodiscard]] std::size_t depth(std::size_t vertex) const {
@@ -88,12 +87,11 @@ class LcaBinaryLifting {
 
   private:
     void check_vertex(std::size_t vertex) const {
-        if (vertex >= tree_.size()) {
+        if (vertex >= parent_.size()) {
             throw std::out_of_range("LcaBinaryLifting vertex is out of range");
         }
     }
 
-    const std::vector<std::vector<std::size_t>>& tree_;
     std::vector<std::size_t> parent_;
     std::vector<std::size_t> depth_;
     std::vector<std::vector<std::size_t>> up_;
