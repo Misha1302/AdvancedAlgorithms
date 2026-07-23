@@ -11,7 +11,7 @@ The repository is built around explicit contracts and reproducible tests rather 
 | Area | Algorithm | Main complexity | Verification |
 |---|---|---:|---|
 | Trees | Centroid decomposition | `O(n log n)` build | balance invariant, random trees, 200k-chain stress |
-| Trees | Heavy-light decomposition | `O(n)` build, `O(log n)` path segments | random paths and subtree ranges vs naive oracle |
+| Trees | Heavy-light decomposition | `O(n)` core build after validation, `O(log n)` path segments | ordered/unordered path segments and subtree ranges vs naive oracle |
 | Trees | LCA by binary lifting | `O(n log n)` build, `O(log n)` query | random queries vs parent-walk oracle |
 | Graphs | Dinic maximum flow | `O(V²E)` general bound | random differential tests vs Edmonds–Karp |
 | Graphs | Iterative Tarjan SCC | `O(V + E)` | random differential tests vs Kosaraju, 500k path |
@@ -21,7 +21,7 @@ The repository is built around explicit contracts and reproducible tests rather 
 | Data structures | Lazy segment tree: range add, sum and minimum | `O(log n)` per operation | 60k mixed random operations vs vector |
 | Data structures | Sparse table for idempotent operations | `O(n log n)` build, `O(1)` query | random minimum and GCD queries |
 | Strings | Aho–Corasick | `O(total patterns + text + matches)` | overlaps, suffixes, duplicates, random naive oracle |
-| Optimization | Generic simulated annealing | user-defined | fixed-seed reproducibility, convergence and time-limit tests |
+| Optimization | Generic simulated annealing minimizer | user-defined state cost per iteration | fixed-seed reproducibility, convergence and time-limit tests |
 
 ## Why the centroid implementation was rewritten
 
