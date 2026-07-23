@@ -1,0 +1,24 @@
+name: Performance tests
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 3 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  large-input-suite:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: >-
+          cmake -S . -B build-release
+          -DCMAKE_BUILD_TYPE=Release
+          -DADVANCED_ALGORITHMS_ENABLE_SANITIZERS=OFF
+      - name: Build
+        run: cmake --build build-release -j2
+      - name: Large-input and TL checks
+        run: ctest --test-dir build-release -L performance --output-on-failure

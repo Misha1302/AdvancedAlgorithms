@@ -1,0 +1,12 @@
+/build/
+/cmake-build-*/
+/.cache/
+/compile_commands.json
+*.profraw
+*.profdata
+*.gcda
+*.gcno
+*.o
+*.obj
+*.exe
+.DS_Store
