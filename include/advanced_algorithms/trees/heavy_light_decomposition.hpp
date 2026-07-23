@@ -88,6 +88,8 @@ class HeavyLightDecomposition {
         return {position_[vertex], position_[vertex] + subtree_size_[vertex]};
     }
 
+    // Covers every path vertex exactly once. Segment order and direction are unspecified,
+    // so this overload is intended for commutative aggregates.
     template <class Callback>
     void for_each_path_segment(std::size_t lhs, std::size_t rhs, Callback&& callback) const {
         check_vertex(lhs);
@@ -103,6 +105,43 @@ class HeavyLightDecomposition {
             std::swap(lhs, rhs);
         }
         callback(position_[lhs], position_[rhs] + 1U);
+    }
+
+    // Emits segments in path order from lhs to rhs. If reversed is true, consume
+    // positions in [left, right) from right - 1 down to left; otherwise consume
+    // them from left up to right - 1.
+    template <class Callback>
+    void for_each_ordered_path_segment(std::size_t lhs, std::size_t rhs,
+                                       Callback&& callback) const {
+        check_vertex(lhs);
+        check_vertex(rhs);
+
+        struct Segment {
+            std::size_t left{};
+            std::size_t right{};
+            bool reversed{};
+        };
+        std::vector<Segment> rhs_segments;
+
+        while (head_[lhs] != head_[rhs]) {
+            if (depth_[head_[lhs]] >= depth_[head_[rhs]]) {
+                callback(position_[head_[lhs]], position_[lhs] + 1U, true);
+                lhs = parent_[head_[lhs]];
+            } else {
+                rhs_segments.push_back(Segment{position_[head_[rhs]], position_[rhs] + 1U, false});
+                rhs = parent_[head_[rhs]];
+            }
+        }
+
+        if (depth_[lhs] >= depth_[rhs]) {
+            callback(position_[rhs], position_[lhs] + 1U, true);
+        } else {
+            rhs_segments.push_back(Segment{position_[lhs], position_[rhs] + 1U, false});
+        }
+
+        for (auto iterator = rhs_segments.rbegin(); iterator != rhs_segments.rend(); ++iterator) {
+            callback(iterator->left, iterator->right, iterator->reversed);
+        }
     }
 
     [[nodiscard]] std::size_t parent(std::size_t vertex) const {

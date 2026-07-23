@@ -61,4 +61,19 @@ AA_TEST(tree_structures_do_not_borrow_constructor_input) {
     });
     std::sort(path.begin(), path.end());
     AA_REQUIRE(path == std::vector<std::size_t>({1, 2, 3, 4}));
+
+    std::vector<std::size_t> ordered_path;
+    hld.for_each_ordered_path_segment(
+        2, 4, [&](std::size_t left, std::size_t right, bool reversed) {
+            if (reversed) {
+                for (std::size_t position = right; position-- > left;) {
+                    ordered_path.push_back(hld.vertex_at_position(position));
+                }
+            } else {
+                for (std::size_t position = left; position < right; ++position) {
+                    ordered_path.push_back(hld.vertex_at_position(position));
+                }
+            }
+        });
+    AA_REQUIRE(ordered_path == std::vector<std::size_t>({2, 1, 3, 4}));
 }
